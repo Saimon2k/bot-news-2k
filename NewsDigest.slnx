@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="NewsDigest.App/NewsDigest.App.csproj" />
+  <Project Path="NewsDigest.Core/NewsDigest.Core.csproj" />
+  <Project Path="NewsDigest.Infrastructure/NewsDigest.Infrastructure.csproj" />
+  <Project Path="NewsDigest.Tests/NewsDigest.Tests.csproj" />
+</Solution>

@@ -1,0 +1,38 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+[xX]64/
+build/
+*.Build.csproj.nuget.g.props
+*.Build.csproj.nuget.g.targets
+
+# Visual Studio 
+.vs/
+*.user
+*.vspscc
+*.sln.docstates
+*.suo
+
+# ReSharper
+_ReSharper*/
+*.ReSharper
+*.DotSettings.user
+
+# SonarLint
+.sonarlint/
+
+# Visual Studio 2019 & earlier
+globalobj/
+
+# User secrets
+secrets.json
+**/secrets.json
+UserSecretsId
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
