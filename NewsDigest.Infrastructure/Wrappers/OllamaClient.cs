@@ -1,35 +1,22 @@
-using System.Threading.Tasks;
-using NewsDigest.Core.Interfaces;
+using System.Text;
 using OllamaSharp;
-using Serilog;
 
-namespace NewsDigest.Infrastructure.Wrappers
+namespace NewsDigest.Infrastructure.Wrappers;
+
+public class OllamaClient(ILogger<OllamaClient> logger, IOptions<OllamaOptions> options) : IOllamaClient
 {
-    public class OllamaClient : IOllamaClient
+    private readonly OllamaApiClient _ollama = new(new Uri(options.Value.Url)) { SelectedModel = options.Value.Model };
+
+    public async Task<string> GenerateAsync(string systemPrompt, string userPrompt, CancellationToken ct = default)
     {
-        private readonly ILogger _logger;
-        private readonly OllamaApiClient _ollamaApiClient;
+        var prompt = $"{systemPrompt}\n\n{userPrompt}";
+        var builder = new StringBuilder();
 
-        public OllamaClient(ILogger logger, string ollamaUrl)
-        {
-            _logger = logger;
-            _ollamaApiClient = new OllamaApiClient(ollamaUrl);
-        }
+        await foreach (var chunk in _ollama.GenerateAsync(prompt, cancellationToken: ct))
+            builder.Append(chunk?.Response);
 
-        public async Task<string> GenerateAsync(string prompt)
-        {
-            try
-            {
-                var response = await _ollamaApiClient.GenerateAsync(prompt, "llama3");
-                
-                _logger.Information("Successfully generated response from Ollama");
-                return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error generating response from Ollama");
-                throw;
-            }
-        }
+        var result = builder.ToString();
+        logger.LogInformation("Ollama: получен ответ длиной {Length} символов", result.Length);
+        return result;
     }
 }

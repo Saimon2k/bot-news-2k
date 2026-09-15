@@ -1,12 +1,8 @@
-using System.Threading.Tasks;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IDigestQueueService
 {
-    public interface IDigestQueueService
-    {
-        Task<DigestItem> GetNextItemAsync(int userId);
-        Task MarkAsSentAsync(int itemId);
-        Task<DigestQueue> GetCurrentQueueAsync(int userId);
-    }
+    Task<DigestItem?> GetNextItemAsync(int userId, CancellationToken ct = default);
+    Task MarkAsSentAsync(int itemId, CancellationToken ct = default);
+    Task<DigestQueue?> GetCurrentQueueAsync(int userId, CancellationToken ct = default);
 }

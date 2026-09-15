@@ -1,34 +1,18 @@
-using Serilog;
-using Telegram.Bot.Types;
-using NewsDigest.Core.Interfaces;
-
 namespace NewsDigest.Infrastructure.Wrappers;
 
-public class UserbotAuthService : IUserbotAuthService
+public class UserbotAuthService(ILogger<UserbotAuthService> logger, IUserbotClient userbotClient) : IUserbotAuthService
 {
-    private readonly ILogger _logger;
-    private readonly IUserbotClient _userbotClient;
-
-    public UserbotAuthService(ILogger logger, IUserbotClient userbotClient) => (_logger, _userbotClient) = (logger, userbotClient);
-
-    public async Task<bool> LoginAsync()
+    public async Task<bool> LoginAsync(CancellationToken ct = default)
     {
         try
         {
-            _logger.Information("Starting userbot authentication process");
-            
-            if (!(await _userbotClient.ConnectAsync()))
-            {
-                _logger.Error("Cannot connect to Telegram API for authentication");
-                return false;
-            }
-            
-            _logger.Information("Userbot authentication successful");
-            return true;
+            var ok = await userbotClient.ConnectAsync(ct);
+            if (ok) logger.LogInformation("Юзербот успешно авторизован");
+            return ok;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error during userbot authentication");
+            logger.LogError(ex, "Ошибка авторизации юзербота");
             return false;
         }
     }

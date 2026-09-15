@@ -1,58 +1,70 @@
 using Microsoft.EntityFrameworkCore;
-using NewsDigest.Core.Interfaces;
-using NewsDigest.Core.Models;
 using NewsDigest.Infrastructure.Data;
 
 namespace NewsDigest.Infrastructure.Repositories;
 
-public class DigestQueueRepository : IDigestQueueRepository
+public class DigestQueueRepository(AppDbContext context) : IDigestQueueRepository
 {
-    private readonly AppDbContext _context;
-
-    public DigestQueueRepository(AppDbContext context) => _context = context;
-
-    public async Task<DigestQueue> CreateQueueAsync(DigestQueue queue)
+    public async Task<DigestQueue> CreateQueueAsync(DigestQueue queue, CancellationToken ct = default)
     {
-        _context.DigestQueues.Add(queue);
-        await _context.SaveChangesAsync();
+        var activeQueues = await context.DigestQueues
+            .Where(q => q.UserId == queue.UserId && q.Status == DigestQueueStatus.Active)
+            .ToListAsync(ct);
+        foreach (var active in activeQueues) active.Status = DigestQueueStatus.Finished;
+
+        context.DigestQueues.Add(queue);
+        await context.SaveChangesAsync(ct);
         return queue;
     }
 
-    public async Task<List<DigestItem>> AddItemsAsync(List<DigestItem> items)
+    public async Task AddItemsAsync(IReadOnlyList<DigestItem> items, CancellationToken ct = default)
     {
-        _context.DigestItems.AddRange(items);
-        await _context.SaveChangesAsync();
-        return items;
+        context.DigestItems.AddRange(items);
+        await context.SaveChangesAsync(ct);
     }
 
-    public async Task<DigestItem> GetNextItemAsync(int userId)
+    public async Task<DigestItem?> GetNextItemAsync(int userId, CancellationToken ct = default)
     {
-        return await _context.DigestItems
-            .Where(item => item.DigestQueueId != 0 && /* Simplified check for user scope */ true && !item.IsSent)
-            .OrderBy(item => item.OrderIndex)
-            .Select(item => item with { Id = item.Id }) // Using record syntax pattern if available
-            .FirstOrDefaultAsync();
-    }
+        var activeQueue = await context.DigestQueues.FirstOrDefaultAsync(q => q.UserId == userId && q.Status == DigestQueueStatus.Active, ct);
+        if (activeQueue is null) return null;
 
-    public async Task<DigestItem> MarkAsSentAsync(DigestItem item)
-    {
-        if (item == null) return null;
-        
-        // Update the status/sent flag for the specific record
-        var existingItem = await _context.DigestItems.FindAsync(item.Id);
-        if (existingItem != null)
+        var item = await context.DigestItems
+            .Where(i => i.DigestQueueId == activeQueue.Id && !i.IsSent)
+            .OrderBy(i => i.OrderIndex)
+            .FirstOrDefaultAsync(ct);
+
+        if (item is null)
         {
-            existingItem with { IsSent = true };
-            await _context.SaveChangesAsync();
-            return existingItem with { IsSent = true };
+            activeQueue.Status = DigestQueueStatus.Finished;
+            await context.SaveChangesAsync(ct);
+            return null;
         }
-        return null;
+
+        item.IsSent = true;
+        await context.SaveChangesAsync(ct);
+        return item;
     }
 
-    public async Task<DigestQueue> GetCurrentQueueAsync(int userId)
+    public async Task<DigestItem?> GetByIdAsync(int itemId, CancellationToken ct = default) =>
+        await context.DigestItems.FindAsync([itemId, ct]);
+
+    public async Task<int> CountUnsentAsync(int userId, CancellationToken ct = default)
     {
-        // Assuming for simplicity that each user has one active queue
-        return await _context.DigestQueues
-            .FirstOrDefaultAsync(q => q.UserId == userId && q.Status == "ACTIVE");
+        var activeQueue = await context.DigestQueues.FirstOrDefaultAsync(q => q.UserId == userId && q.Status == DigestQueueStatus.Active, ct);
+        if (activeQueue is null) return 0;
+
+        return await context.DigestItems.CountAsync(i => i.DigestQueueId == activeQueue.Id && !i.IsSent, ct);
     }
+
+    public async Task MarkAsSentAsync(int itemId, CancellationToken ct = default)
+    {
+        var item = await context.DigestItems.FindAsync([itemId, ct]);
+        if (item is null) return;
+
+        item.IsSent = true;
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task<DigestQueue?> GetCurrentQueueAsync(int userId, CancellationToken ct = default) =>
+        await context.DigestQueues.FirstOrDefaultAsync(q => q.UserId == userId && q.Status == DigestQueueStatus.Active, ct);
 }

@@ -1,10 +1,6 @@
-using System.Threading.Tasks;
-using Telegram.Bot.Types;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IBotService
 {
-    public interface IBotService
-    {
-        Task HandleCommandAsync(Update update);
-    }
+    Task HandleCommandAsync(BotCommand command, CancellationToken ct = default);
 }

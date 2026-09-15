@@ -1,10 +1,6 @@
-using System.Threading.Tasks;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface INewsLinkSender
 {
-    public interface INewsLinkSender
-    {
-        Task SendNewsLinkAsync(int userId, DigestItem digestItem);
-    }
+    Task SendNewsLinkAsync(long telegramUserId, DigestItem digestItem, CancellationToken ct = default);
 }

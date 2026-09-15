@@ -1,36 +1,33 @@
 using Microsoft.EntityFrameworkCore;
-using NewsDigest.Core.Interfaces;
-using NewsDigest.Core.Models;
+using NewsDigest.Infrastructure.Data;
 
 namespace NewsDigest.Infrastructure.Repositories;
 
-public class UserChannelRepository : IUserChannelRepository
+public class UserChannelRepository(AppDbContext context) : IUserChannelRepository
 {
-    private readonly AppDbContext _context;
-
-    // Primary constructor style
-    public UserChannelRepository(AppDbContext context) => _context = context;
-
-    public async Task<UserChannel> AddAsync(UserChannel channel)
+    public async Task<UserChannel> AddAsync(UserChannel channel, CancellationToken ct = default)
     {
-        _context.UserChannels.Add(channel);
-        await _context.SaveChangesAsync();
+        context.UserChannels.Add(channel);
+        await context.SaveChangesAsync(ct);
         return channel;
     }
 
-    public async Task<List<UserChannel>> GetAllForUserAsync(int userId) => 
-        await _context.UserChannels.Where(c => c.UserId == userId).ToListAsync();
+    public async Task<IReadOnlyList<UserChannel>> GetAllForUserAsync(int userId, CancellationToken ct = default) =>
+        await context.UserChannels.AsNoTracking().Where(c => c.UserId == userId).OrderBy(c => c.Title).ToListAsync(ct);
 
-    public async Task<UserChannel> GetAsync(int id) => 
-        await _context.UserChannels.FindAsync(id);
+    public async Task<UserChannel?> GetAsync(int id, CancellationToken ct = default) =>
+        await context.UserChannels.FindAsync([id, ct]);
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var channel = await _context.UserChannels.FindAsync(id);
-        if (channel != null)
-        {
-            _context.UserChannels.Remove(channel);
-            await _context.SaveChangesAsync();
-        }
+        var channel = await context.UserChannels.FindAsync([id, ct]);
+        if (channel is null) return false;
+
+        context.UserChannels.Remove(channel);
+        await context.SaveChangesAsync(ct);
+        return true;
     }
+
+    public async Task<UserChannel?> GetByChannelIdAsync(int userId, long channelId, CancellationToken ct = default) =>
+        await context.UserChannels.FirstOrDefaultAsync(c => c.UserId == userId && c.ChannelId == channelId, ct);
 }

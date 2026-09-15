@@ -1,10 +1,6 @@
-using System.Threading.Tasks;
-using System.Collections.Generic;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IOllamaClient
 {
-    public interface IOllamaClient
-    {
-        Task<string> GenerateAsync(string prompt);
-    }
+    Task<string> GenerateAsync(string systemPrompt, string userPrompt, CancellationToken ct = default);
 }

@@ -1,66 +1,130 @@
-using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
+using TL;
 using WTelegram;
 
 namespace NewsDigest.Infrastructure.Wrappers;
 
-// Using record for immutability and simplicity
-public class UserbotClient : IUserbotClient
+public class UserbotClient(ILogger<UserbotClient> logger, IOptions<TelegramOptions> options) : IUserbotClient
 {
-    private readonly ILogger _logger;
-    private readonly string _sessionPath;
-    private readonly string _apiId;
-    private readonly string _apiHash;
-    private readonly string _phoneNumber;
+    private readonly TelegramOptions _options = options.Value;
+    private Client? _client;
 
-    // Primary constructor style
-    public UserbotClient(ILogger logger, string sessionPath, string apiId, string apiHash, string phoneNumber)
-    {
-        _logger = logger;
-        _sessionPath = sessionPath;
-        _apiId = apiId;
-        _apiHash = apiHash;
-        _phoneNumber = phoneNumber;
-    }
+    private Client Client => _client ?? throw new InvalidOperationException("Юзербот не инициализирован");
 
-    public async Task<bool> ConnectAsync()
+    public async Task<bool> ConnectAsync(CancellationToken ct = default)
     {
-        if (_client != null) return true;
+        if (_client is not null) return true;
+
+        _client = new Client(what => what switch
+        {
+            "api_id" => _options.ApiId,
+            "api_hash" => _options.ApiHash,
+            "session_pathname" => _options.SessionPath,
+            _ => null!,
+        });
+        _client.FloodRetryThreshold = 2;
+
+        Helpers.Log = (level, message) => logger.Log((LogLevel)Math.Clamp(level, 0, 6), message);
 
         try
         {
-            _logger.Information("Attempting to connect to Telegram API...");
-            _client = new Client(_apiId, _apiHash);
-            
-            var connected = await _client.ConnectAsync();
-            
-            if (!connected)
+            var loginInfo = _options.PhoneNumber;
+            while (_client.User is null)
             {
-                _logger.Warning("Failed to establish connection to Telegram API");
-                return false;
+                var what = await _client.Login(loginInfo);
+                switch (what)
+                {
+                    case "verification_code":
+                        loginInfo = Prompt("Введите код из Telegram: ");
+                        break;
+                    case "password":
+                        loginInfo = Prompt("Введите пароль 2FA: ");
+                        break;
+                    case "name":
+                        loginInfo = Prompt("Введите ваше имя: ");
+                        break;
+                    case "email":
+                    case "email_verification_code":
+                        loginInfo = Prompt("Введите email: ");
+                        break;
+                    case null:
+                        ct.ThrowIfCancellationRequested();
+                        break;
+                    default:
+                        logger.LogWarning("Неизвестный шаг авторизации: {What}", what);
+                        loginInfo = Prompt("Введите запрошенное значение: ");
+                        break;
+                }
             }
-            
-            _logger.Information("Successfully connected to Telegram API");
+
+            logger.LogInformation("Юзербот авторизован как {Id}", _client.User!.id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error while connecting to Telegram API");
+            logger.LogError(ex, "Ошибка подключения/авторизации юзербота");
             return false;
         }
     }
 
-    // Simplified version for refactoring example
-    public async Task<List<Message>> GetHistoryAsync(long channelId, DateTime from, DateTime to)
+    public async Task<IReadOnlyList<ChannelMessage>> GetHistoryAsync(long channelId, string? channelUsername, DateTime from, DateTime to, CancellationToken ct = default)
     {
-        if (_client == null) throw new InvalidOperationException("Client is not connected");
-        
-        _logger.Information("Fetching history for {ChannelId} from {FromDate:yyyy-MM-dd} to {ToDate:yyyy-MM-dd}", channelId, from: from, to: to);
-        
-        // Placeholder implementation
-        return new List<Message>(); 
+        var peer = await ResolvePeerAsync(channelId, channelUsername, ct);
+        var result = await Client.Messages_GetHistory(peer,
+            offset_id: 0, offset_date: to, add_offset: 0, limit: 100, max_id: 0, min_id: 0, hash: 0);
+
+        return result.Messages
+            .OfType<TL.Message>()
+            .Where(m => m.date >= from && m.date <= to)
+            .Select(m => new ChannelMessage(channelId, channelUsername, m.id, m.date, m.message ?? string.Empty, m.media is not null))
+            .ToList();
     }
 
-    public Task<string> GetMessageUrlAsync(long channelId, long messageId) => 
-        Task.FromResult($"t.me/{channelId}/{messageId}");
+    public Task<string> GetMessageUrlAsync(long channelId, string? channelUsername, long messageId, CancellationToken ct = default) =>
+        Task.FromResult(string.IsNullOrEmpty(channelUsername)
+            ? $"https://t.me/c/{channelId}/{messageId}"
+            : $"https://t.me/{channelUsername.TrimStart('@')}/{messageId}");
+
+    public async Task<long?> ResolveChannelAsync(string link, CancellationToken ct = default)
+    {
+        var username = NormalizeUsername(link);
+        if (string.IsNullOrEmpty(username)) return null;
+
+        try
+        {
+            var resolved = await Client.Contacts_ResolveUsername(username, null);
+            return resolved.Channel?.id;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Не удалось разрешить канал {Link}", link);
+            return null;
+        }
+    }
+
+    private async Task<InputPeer> ResolvePeerAsync(long channelId, string? channelUsername, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(channelUsername))
+        {
+            var resolved = await Client.Contacts_ResolveUsername(channelUsername.TrimStart('@'), null);
+            var channel = resolved.Channel;
+            if (channel is not null) return new InputPeerChannel(channel.id, channel.access_hash);
+        }
+
+        logger.LogWarning("Нет username или запрещённый канал {ChannelId}, использую InputPeerChannel без access_hash", channelId);
+        return new InputPeerChannel(channelId, 0);
+    }
+
+    private static string NormalizeUsername(string link)
+    {
+        var text = link.Trim().TrimStart('@');
+        if (text.Contains("t.me/", StringComparison.Ordinal))
+            text = text[(text.LastIndexOf("t.me/", StringComparison.Ordinal) + 5)..].Trim('/');
+        return text.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? text;
+    }
+
+    private static string Prompt(string message)
+    {
+        Console.Write(message);
+        return Console.ReadLine() ?? string.Empty;
+    }
 }

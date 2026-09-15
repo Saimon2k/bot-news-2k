@@ -1,12 +1,6 @@
-using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IDigestService
 {
-    public interface IDigestService
-    {
-        Task<List<DigestItem>> CreateDigestAsync(int userId, List<CollectedMessage> messages);
-    }
+    Task<IReadOnlyList<DigestItem>> CreateDigestAsync(int userId, IReadOnlyList<CollectedMessage> messages, CancellationToken ct = default);
 }

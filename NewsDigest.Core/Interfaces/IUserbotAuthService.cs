@@ -1,9 +1,6 @@
-using System.Threading.Tasks;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IUserbotAuthService
 {
-    public interface IUserbotAuthService
-    {
-        Task<bool> LoginAsync();
-    }
+    Task<bool> LoginAsync(CancellationToken ct = default);
 }

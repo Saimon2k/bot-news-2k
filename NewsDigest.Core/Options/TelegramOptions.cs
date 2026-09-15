@@ -1,11 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace NewsDigest.Core.Options
 {
     public class TelegramOptions
     {
-        public string ApiId { get; set; } = string.Empty;
-        public string ApiHash { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string SessionPath { get; set; } = string.Empty;
-        public string BotToken { get; set; } = string.Empty;
+        [Required] public string ApiId { get; set; } = string.Empty;
+        [Required] public string ApiHash { get; set; } = string.Empty;
+        [Required] public string PhoneNumber { get; set; } = string.Empty;
+        [Required] public string SessionPath { get; set; } = string.Empty;
+        [Required] public string BotToken { get; set; } = string.Empty;
     }
 }

@@ -1,3 +1,8 @@
 namespace NewsDigest.Core.Models;
 
-public record User(int Id, long TelegramUserId, DateTime CreatedAt);
+public class User
+{
+    public int Id { get; set; }
+    public long TelegramUserId { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

@@ -1,12 +1,6 @@
-using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface INewsCollector
 {
-    public interface INewsCollector
-    {
-        Task<List<CollectedMessage>> CollectNewsAsync(int userId);
-    }
+    Task<NewsCollectionResult> CollectNewsAsync(int userId, CancellationToken ct = default);
 }

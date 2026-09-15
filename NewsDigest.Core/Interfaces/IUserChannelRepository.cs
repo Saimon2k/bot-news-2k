@@ -1,14 +1,10 @@
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IUserChannelRepository
 {
-    public interface IUserChannelRepository
-    {
-        Task<UserChannel> AddAsync(UserChannel channel);
-        Task<List<UserChannel>> GetAllForUserAsync(int userId);
-        Task<UserChannel> GetAsync(int id);
-        Task DeleteAsync(int id);
-    }
+    Task<UserChannel> AddAsync(UserChannel channel, CancellationToken ct = default);
+    Task<IReadOnlyList<UserChannel>> GetAllForUserAsync(int userId, CancellationToken ct = default);
+    Task<UserChannel?> GetAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<UserChannel?> GetByChannelIdAsync(int userId, long channelId, CancellationToken ct = default);
 }

@@ -1,11 +1,8 @@
-using System.Threading.Tasks;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Interfaces;
 
-namespace NewsDigest.Core.Interfaces
+public interface IChannelStateRepository
 {
-    public interface IChannelStateRepository
-    {
-        Task<ChannelState> GetAsync(int userId, long channelId);
-        Task<ChannelState> UpdateAsync(ChannelState state);
-    }
+    Task<ChannelState?> GetAsync(int userId, long channelId, CancellationToken ct = default);
+    Task<ChannelState> GetOrCreateAsync(int userId, long channelId, CancellationToken ct = default);
+    Task UpdateLastDigestAsync(int userId, long channelId, DateTime lastDigestDate, long lastMessageId, CancellationToken ct = default);
 }

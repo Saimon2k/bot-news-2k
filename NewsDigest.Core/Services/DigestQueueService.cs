@@ -1,35 +1,19 @@
-using System.Threading.Tasks;
-using NewsDigest.Core.Interfaces;
-using NewsDigest.Core.Models;
+namespace NewsDigest.Core.Services;
 
-namespace NewsDigest.Core.Services
+public class DigestQueueService(
+    ILogger<DigestQueueService> logger,
+    IDigestQueueRepository queueRepository) : IDigestQueueService
 {
-    public class DigestQueueService : IDigestQueueService
+    public Task<DigestQueue?> GetCurrentQueueAsync(int userId, CancellationToken ct = default) =>
+        queueRepository.GetCurrentQueueAsync(userId, ct);
+
+    public async Task<DigestItem?> GetNextItemAsync(int userId, CancellationToken ct = default)
     {
-        private readonly IDigestQueueRepository _queueRepository;
-
-        public DigestQueueService(IDigestQueueRepository queueRepository)
-        {
-            _queueRepository = queueRepository;
-        }
-
-        public async Task<DigestItem> GetNextItemAsync(int userId)
-        {
-            return await _queueRepository.GetNextItemAsync(userId);
-        }
-
-        public async Task MarkAsSentAsync(int itemId)
-        {
-            var item = await _queueRepository.GetNextItemAsync(itemId);
-            if (item != null)
-            {
-                await _queueRepository.MarkAsSentAsync(item);
-            }
-        }
-
-        public async Task<DigestQueue> GetCurrentQueueAsync(int userId)
-        {
-            return await _queueRepository.GetCurrentQueueAsync(userId);
-        }
+        var item = await queueRepository.GetNextItemAsync(userId, ct);
+        if (item is null) logger.LogInformation("Очередь пользователя {UserId} закончилась", userId);
+        return item;
     }
+
+    public async Task MarkAsSentAsync(int itemId, CancellationToken ct = default) =>
+        await queueRepository.MarkAsSentAsync(itemId, ct);
 }
