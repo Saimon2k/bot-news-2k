@@ -40,3 +40,5 @@ logs/
 */obj/
 */bin/
 
+/NewsDigest.App/obj/NewsDigest.App.csproj.nuget.dgspec.json
+/NewsDigest.App/obj/NewsDigest.App.csproj.nuget.g.props
