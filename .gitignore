@@ -36,3 +36,7 @@ UserSecretsId
 # Logs
 *.log
 logs/
+
+*/obj/
+*/bin/
+

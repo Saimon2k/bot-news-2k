@@ -18,7 +18,8 @@ public class UserbotClient(ILogger<UserbotClient> logger, IOptions<TelegramOptio
         {
             "api_id" => _options.ApiId,
             "api_hash" => _options.ApiHash,
-            "session_pathname" => _options.SessionPath,
+            "phone_number" => _options.PhoneNumber,
+            //"session_pathname" => _options.SessionPath,
             _ => null!,
         });
         _client.FloodRetryThreshold = 2;
