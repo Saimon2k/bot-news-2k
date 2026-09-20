@@ -8,7 +8,7 @@
           "build/net10.0/coverlet.collector.targets": {}
         }
       },
-      "FluentAssertions/8.10.0": {
+      "FluentAssertions/8.11.0": {
         "type": "package",
         "compile": {
           "lib/net6.0/FluentAssertions.dll": {
@@ -652,22 +652,6 @@
           }
         }
       },
-      "Serilog/4.4.0": {
-        "type": "package",
-        "compile": {
-          "lib/net10.0/Serilog.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net10.0/Serilog.dll": {
-            "related": ".xml"
-          }
-        },
-        "build": {
-          "buildTransitive/Serilog.targets": {}
-        }
-      },
       "SQLitePCLRaw.bundle_e_sqlite3/2.1.12": {
         "type": "package",
         "dependencies": {
@@ -836,6 +820,19 @@
           }
         }
       },
+      "WTelegramClient/4.4.8": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/WTelegramClient.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/WTelegramClient.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "xunit/2.9.3": {
         "type": "package",
         "dependencies": {
@@ -936,10 +933,8 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
-          "FluentAssertions": "8.10.0",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12",
-          "Serilog": "4.4.0",
-          "xunit": "2.9.3"
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.12",
+          "Microsoft.Extensions.Options": "10.0.12"
         },
         "compile": {
           "bin/placeholder/NewsDigest.Core.dll": {}
@@ -953,9 +948,13 @@
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Sqlite": "10.0.12",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.12",
+          "Microsoft.Extensions.Options": "10.0.12",
           "NewsDigest.Core": "1.0.0",
           "OllamaSharp": "5.4.30",
-          "Telegram.Bot": "22.10.3.1"
+          "Telegram.Bot": "22.10.3.1",
+          "WTelegramClient": "4.4.8"
         },
         "compile": {
           "bin/placeholder/NewsDigest.Infrastructure.dll": {}
@@ -1133,16 +1132,16 @@
         "coverlet.collector.nuspec"
       ]
     },
-    "FluentAssertions/8.10.0": {
-      "sha512": "yGvv+xp0gHFgGwhQcGoDdKIrhLhPi3zYYWWLLHPMctr+G6PWD7QH8L4wqoa5WRZquPbfSV/cP1MraI7ppAHrWw==",
+    "FluentAssertions/8.11.0": {
+      "sha512": "dZqOxys9uY/0vO5BAwFtDECkFNSr9vWGwHa1fwZyuM1xAMbI4wiPTUBR2nH5e6R2/bQkXegxFY1B/oU1yqNNOw==",
       "type": "package",
-      "path": "fluentassertions/8.10.0",
+      "path": "fluentassertions/8.11.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "FluentAssertions.png",
         "LICENSE",
-        "fluentassertions.8.10.0.nupkg.sha512",
+        "fluentassertions.8.11.0.nupkg.sha512",
         "fluentassertions.nuspec",
         "lib/net47/FluentAssertions.dll",
         "lib/net47/FluentAssertions.pdb",
@@ -1987,35 +1986,6 @@
         "ollamasharp.nuspec"
       ]
     },
-    "Serilog/4.4.0": {
-      "sha512": "ZC6Le3rr4TVJJjS4KsQAesxeF1EhW9qcZmmG7eP5Y2G3+gTGkJEUXkq4+tZNPtyp05I0wWOxnIjwtxFweJsObw==",
-      "type": "package",
-      "path": "serilog/4.4.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.md",
-        "build/Serilog.targets",
-        "buildTransitive/Serilog.targets",
-        "icon.png",
-        "lib/net10.0/Serilog.dll",
-        "lib/net10.0/Serilog.xml",
-        "lib/net462/Serilog.dll",
-        "lib/net462/Serilog.xml",
-        "lib/net471/Serilog.dll",
-        "lib/net471/Serilog.xml",
-        "lib/net6.0/Serilog.dll",
-        "lib/net6.0/Serilog.xml",
-        "lib/net8.0/Serilog.dll",
-        "lib/net8.0/Serilog.xml",
-        "lib/net9.0/Serilog.dll",
-        "lib/net9.0/Serilog.xml",
-        "lib/netstandard2.0/Serilog.dll",
-        "lib/netstandard2.0/Serilog.xml",
-        "serilog.4.4.0.nupkg.sha512",
-        "serilog.nuspec"
-      ]
-    },
     "SQLitePCLRaw.bundle_e_sqlite3/2.1.12": {
       "sha512": "mAgscpQMLw5/nfA1Q5oJVAT29yROUo1ifZGbbTpx/lwZpSxMUGoYbKfmvdm8oXER+RzxqBmmQzeBEVKfeHv2nw==",
       "type": "package",
@@ -2149,6 +2119,25 @@
         "package-icon.png",
         "telegram.bot.22.10.3.1.nupkg.sha512",
         "telegram.bot.nuspec"
+      ]
+    },
+    "WTelegramClient/4.4.8": {
+      "sha512": "OXdL174uzJVJrT+pFjBjcQuaEFpnCyybV/legX/4aAlgXgg268I/HG6R4wgeqP/MLuMgP/+uBGwNKEpmoqB87Q==",
+      "type": "package",
+      "path": "wtelegramclient/4.4.8",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "lib/net5.0/WTelegramClient.dll",
+        "lib/net5.0/WTelegramClient.xml",
+        "lib/net8.0/WTelegramClient.dll",
+        "lib/net8.0/WTelegramClient.xml",
+        "lib/netstandard2.0/WTelegramClient.dll",
+        "lib/netstandard2.0/WTelegramClient.xml",
+        "logo.png",
+        "wtelegramclient.4.4.8.nupkg.sha512",
+        "wtelegramclient.nuspec"
       ]
     },
     "xunit/2.9.3": {
@@ -2304,6 +2293,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "FluentAssertions >= 8.11.0",
       "Microsoft.NET.Test.Sdk >= 18.10.0",
       "NewsDigest.Core >= 1.0.0",
       "NewsDigest.Infrastructure >= 1.0.0",
@@ -2372,6 +2362,10 @@
         "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
+          "FluentAssertions": {
+            "target": "Package",
+            "version": "[8.11.0, )"
+          },
           "Microsoft.NET.Test.Sdk": {
             "target": "Package",
             "version": "[18.10.0, )"
