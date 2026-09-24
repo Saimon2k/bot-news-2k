@@ -10,8 +10,8 @@ using NewsDigest.Core.Services;
 using NewsDigest.Infrastructure.Data;
 using NewsDigest.Infrastructure.Repositories;
 using NewsDigest.Infrastructure.Wrappers;
-using Serilog;
-using Serilog.Events;
+// using Serilog;
+// using Serilog.Events;
 using Telegram.Bot;
 
 namespace NewsDigest.App;
@@ -20,22 +20,22 @@ internal static class Program
 {
     public static async Task Main(string[] args)
     {
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .WriteTo.File(Path.Combine("logs", "digest-.log"), rollingInterval: RollingInterval.Day)
-            .CreateLogger();
+        // Log.Logger = new LoggerConfiguration()
+        //     .MinimumLevel.Information()
+        //     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        //     .Enrich.FromLogContext()
+        //     .WriteTo.Console()
+        //     .WriteTo.File(Path.Combine("logs", "digest-.log"), rollingInterval: RollingInterval.Day)
+        //     .CreateLogger();
 
         try
         {
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(builder => builder.AddUserSecrets(typeof(Program).Assembly, optional: true))
-                .UseSerilog((context, services, configuration) => configuration
-                    .Enrich.FromLogContext()
-                    .WriteTo.Console()
-                    .WriteTo.File(Path.Combine("logs", "digest-.log"), rollingInterval: RollingInterval.Day))
+                // .UseSerilog((context, services, configuration) => configuration
+                //     .Enrich.FromLogContext()
+                //     .WriteTo.Console()
+                //     .WriteTo.File(Path.Combine("logs", "digest-.log"), rollingInterval: RollingInterval.Day))
                 .ConfigureServices((context, services) =>
                 {
                     var config = context.Configuration;
@@ -80,11 +80,11 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Приложение завершилось с ошибкой");
+            // Log.Fatal(ex, "Приложение завершилось с ошибкой");
         }
         finally
         {
-            Log.CloseAndFlush();
+            // Log.CloseAndFlush();
         }
     }
 }

@@ -19,7 +19,7 @@
 - Telegram.Bot для бота
 - OllamaSharp для локальной Ollama
 - SQLite + EF Core для состояния (пользователи, каналы, last_date, очередь дайджеста)
-- Serilog для логирования
+- Microsoft Logging для логирования
 - xUnit + FluentAssertions для тестов
 
 ## АРХИТЕКТУРА

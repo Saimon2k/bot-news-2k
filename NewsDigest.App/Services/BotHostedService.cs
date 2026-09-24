@@ -27,6 +27,11 @@ public class BotHostedService(
     {
         logger.LogInformation("Запуск NewsDigest...");
 
+//     using var client = new WTelegram.Client();
+//     var myself = await client.LoginUserIfNeeded();
+//     Console.WriteLine($"We are logged-in as {myself} (id {myself.id})");
+// return;
+
         var storage = storageOptions.Value;
         Directory.CreateDirectory(storage.BatchDirectory);
         var dbDirectory = Path.GetDirectoryName(storage.DatabasePath);
