@@ -40,8 +40,6 @@ public class DigestQueueRepository(AppDbContext context) : IDigestQueueRepositor
             return null;
         }
 
-        item.IsSent = true;
-        await context.SaveChangesAsync(ct);
         return item;
     }
 
