@@ -9,6 +9,8 @@ public class OllamaClient(ILogger<OllamaClient> logger, IOptions<OllamaOptions> 
 
     public async Task<string> GenerateAsync(string systemPrompt, string userPrompt, CancellationToken ct = default)
     {
+        logger.LogInformation("Ollama: используется URL={Url}, Model={Model}", options.Value.Url, options.Value.Model);
+        
         var prompt = $"{systemPrompt}\n\n{userPrompt}";
         var builder = new StringBuilder();
 

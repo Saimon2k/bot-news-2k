@@ -8,7 +8,7 @@
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/NewsDigest.App/bin/Debug/net10.0/NewsDigest.App.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/NewsDigest.App",
+            "cwd": "${workspaceFolder}/NewsDigest.App/bin/Debug/net10.0",
             "stopAtEntry": false,
             "console": "integratedTerminal",
             "env": {
@@ -24,7 +24,7 @@
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/NewsDigest.App/bin/Debug/net10.0/NewsDigest.App.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/NewsDigest.App",
+            "cwd": "${workspaceFolder}/NewsDigest.App/bin/Debug/net10.0",
             "stopAtEntry": false,
             "console": "integratedTerminal",
             "env": {

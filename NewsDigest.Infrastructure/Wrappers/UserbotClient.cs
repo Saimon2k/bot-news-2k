@@ -72,7 +72,7 @@ public class UserbotClient(ILogger<UserbotClient> logger, IOptions<TelegramOptio
     {
         var peer = await ResolvePeerAsync(channelId, channelUsername, ct);
         var result = await Client.Messages_GetHistory(peer,
-            offset_id: 0, offset_date: to, add_offset: 0, limit: 100, max_id: 0, min_id: 0, hash: 0);
+            offset_id: 0, offset_date: to, add_offset: 0, limit: 10, max_id: 0, min_id: 0, hash: 0);
 
         return result.Messages
             .OfType<TL.Message>()

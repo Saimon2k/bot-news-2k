@@ -171,8 +171,31 @@ public class TelegramBotService(
             return;
         }
 
-        await newsLinkSender.SendNewsLinkAsync(telegramUserId, item, ct);
-        await queueService.MarkAsSentAsync(item.Id, ct);
+        try
+        {
+            await newsLinkSender.SendNewsLinkAsync(telegramUserId, item, ct);
+            await queueService.MarkAsSentAsync(item.Id, ct);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("не начал диалог"))
+        {
+            // Этот catch не должен срабатывать, т.к. мы в контексте активного чата с пользователем
+            // Но на всякий случай обрабатываем
+            logger.LogError(ex, "Неожиданная ошибка: пользователь {UserId} не начал диалог, хотя команда пришла", telegramUserId);
+            await ReplyAsync(telegramUserId, 
+                "⚠️ Внутренняя ошибка: бот не может отправить сообщение. Попробуйте заново запустить бота через /start.", ct);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("заблокировал"))
+        {
+            logger.LogWarning("Пользователь {UserId} заблокировал бота", telegramUserId);
+            await ReplyAsync(telegramUserId, 
+                "⚠️ Не удалось отправить новость — вы заблокировали бота. Разблокируйте и попробуйте снова.", ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Не удалось отправить новость {ItemId} пользователю {UserId}", item.Id, telegramUserId);
+            await ReplyAsync(telegramUserId, 
+                $"⚠️ Не удалось отправить новость.\n\nПрямая ссылка: {item.MessageUrl}", ct);
+        }
     }
 
     private async Task HandleStatusAsync(long telegramUserId, CancellationToken ct)

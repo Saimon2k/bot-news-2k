@@ -16,12 +16,15 @@ public class DigestService(
         Задача:
         1. Убери рекламу, промо, партнёрские ссылки, приглашения, скам.
         2. Убери смысловые повторы. Если несколько новостей об одном и том же — оставь одну, самую раннюю и полную.
-        3. Верни строго JSON без текста вокруг:
+        3. Верни строго JSON без текста вокруг. ВАЖНО: отвечай ТОЛЬКО JSON, без пояснений, без markdown, без лишнего текста.
+        
+        Формат ответа:
         {
-          "selected": [{"id": "...", "reason": "..."}],
-          "ads": ["..."],
-          "duplicates": ["..."]
+          "selected": [{"id": 123, "reason": "важная новость"}],
+          "ads": [456],
+          "duplicates": [789]
         }
+        
         Не добавляй id, которых нет во входе. Не меняй id. Не пиши ничего кроме JSON.
         """;
 
@@ -77,7 +80,7 @@ public class DigestService(
                 var parsed = DigestResponseParser.TryParse(raw);
                 if (parsed is not null) return parsed;
 
-                logger.LogWarning("Попытка {Attempt}: LLM вернул невалидный JSON", attempt);
+                logger.LogWarning("Попытка {Attempt}: LLM вернул невалидный JSON. Ответ: {Response}", attempt, raw.Length > 500 ? raw[..500] + "..." : raw);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {

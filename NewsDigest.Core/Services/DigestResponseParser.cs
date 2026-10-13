@@ -1,16 +1,45 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace NewsDigest.Core.Services;
 
 public static class DigestResponseParser
 {
+    private static readonly Regex JsonMarkdownBlockRegex = new(@"```(?:json)?\s*(\{.*?\})\s*```", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex JsonObjectRegex = new(@"(\{[^{}]*\{[^{}]*\}[^{}]*\})", RegexOptions.Singleline | RegexOptions.Compiled);
+
     public static DigestResult? TryParse(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
 
+        // Пробуем напрямую распарсить
+        var result = TryParseJson(raw);
+        if (result is not null) return result;
+
+        // Пробуем извлечь JSON из markdown-блока ```json ... ```
+        var markdownMatch = JsonMarkdownBlockRegex.Match(raw);
+        if (markdownMatch.Success)
+        {
+            result = TryParseJson(markdownMatch.Groups[1].Value);
+            if (result is not null) return result;
+        }
+
+        // Последняя попытка: найти JSON-объект в тексте
+        var jsonMatch = JsonObjectRegex.Match(raw);
+        if (jsonMatch.Success)
+        {
+            result = TryParseJson(jsonMatch.Groups[1].Value);
+            if (result is not null) return result;
+        }
+
+        return null;
+    }
+
+    private static DigestResult? TryParseJson(string json)
+    {
         try
         {
-            using var doc = JsonDocument.Parse(raw);
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
 

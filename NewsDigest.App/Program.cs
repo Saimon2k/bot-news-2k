@@ -36,6 +36,12 @@ internal static class Program
                 .UseContentRoot(GetContentRoot())
                 .ConfigureAppConfiguration((context, builder) =>
                 {
+                    // Загружаем секреты из корня проекта
+                    var rootPath = Directory.GetParent(GetContentRoot())?.FullName ?? GetContentRoot();
+                    var secretsJsonPath = Path.Combine(rootPath, ".secrets.json");
+                    if (File.Exists(secretsJsonPath))
+                        builder.AddJsonFile(secretsJsonPath, optional: true, reloadOnChange: false);
+                    
                     builder.AddUserSecrets(typeof(Program).Assembly, optional: true);
                 })
                 // .UseSerilog((context, services, configuration) => configuration
@@ -72,7 +78,7 @@ internal static class Program
 
                     services.AddSingleton<ITelegramBotClient>(sp =>
                     {
-                        var telegramOptions = sp.GetRequiredService<IOptions<TelegramOptions>>().Value;
+                        var telegramOptions = sp.GetService<IOptions<TelegramOptions>>().Value;
                         return new TelegramBotClient(telegramOptions.BotToken);
                     });
                     services.AddSingleton<INewsLinkSender, TelegramNewsLinkSender>();
