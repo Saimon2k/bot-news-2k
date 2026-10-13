@@ -12,6 +12,9 @@ using Telegram.Bot.Types.Enums;
 
 namespace NewsDigest.App.Services;
 
+/// <summary>
+/// Фоновый сервис для управления жизненным циклом Telegram-бота и обработки входящих обновлений.
+/// </summary>
 public class BotHostedService(
     ILogger<BotHostedService> logger,
     IHostApplicationLifetime lifetime,
@@ -22,74 +25,211 @@ public class BotHostedService(
     IOptions<StorageOptions> storageOptions) : IHostedService
 {
     private CancellationTokenSource? _cts;
+    private Task? _pollingTask;
 
+    /// <summary>
+    /// Запуск сервиса: инициализация хранилища, БД, авторизация и начало опроса обновлений.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Запуск NewsDigest...");
 
-//     using var client = new WTelegram.Client();
-//     var myself = await client.LoginUserIfNeeded();
-//     Console.WriteLine($"We are logged-in as {myself} (id {myself.id})");
-// return;
-
-        var storage = storageOptions.Value;
-        Directory.CreateDirectory(storage.BatchDirectory);
-        var dbDirectory = Path.GetDirectoryName(storage.DatabasePath);
-        if (!string.IsNullOrEmpty(dbDirectory)) Directory.CreateDirectory(dbDirectory);
-
-        await using (var scope = scopeFactory.CreateAsyncScope())
+        try
         {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Database.EnsureCreatedAsync(cancellationToken);
+            // Инициализация файловой системы
+            await InitializeStorageAsync(cancellationToken);
+
+            // Инициализация базы данных
+            await InitializeDatabaseAsync(cancellationToken);
+
+            // Авторизация юзербота
+            var authorized = await authService.LoginAsync(cancellationToken);
+            if (!authorized)
+            {
+                logger.LogError("Не удалось авторизовать юзербота, остановка хоста");
+                lifetime.StopApplication();
+                return;
+            }
+
+            // Запуск опроса обновлений
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _pollingTask = Task.Run(() => PollAsync(_cts.Token), _cts.Token);
+
+            logger.LogInformation("NewsDigest успешно запущен");
         }
-
-        var authorized = await authService.LoginAsync(cancellationToken);
-        if (!authorized)
+        catch (Exception ex)
         {
-            logger.LogError("Не удалось авторизовать юзербота, остановка хоста");
+            logger.LogCritical(ex, "Критическая ошибка при запуске NewsDigest");
             lifetime.StopApplication();
-            return;
+            throw;
         }
-
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _ = Task.Run(() => PollAsync(_cts.Token));
     }
 
+    /// <summary>
+    /// Остановка сервиса с graceful shutdown опроса обновлений.
+    /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _cts?.Cancel();
-        logger.LogInformation("Остановка NewsDigest");
-        await Task.CompletedTask;
+        logger.LogInformation("Остановка NewsDigest...");
+
+        try
+        {
+            // Отмена токена для завершения опроса
+            _cts?.Cancel();
+
+            // Ожидание завершения задачи опроса с таймаутом
+            if (_pollingTask != null)
+            {
+                var completedTask = await Task.WhenAny(_pollingTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+                if (completedTask != _pollingTask)
+                {
+                    logger.LogWarning("Задача опроса не завершилась в течение таймаута");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при остановке NewsDigest");
+        }
+        finally
+        {
+            _cts?.Dispose();
+            logger.LogInformation("NewsDigest остановлен");
+        }
     }
 
+    /// <summary>
+    /// Инициализация директорий хранилища.
+    /// </summary>
+    private async Task InitializeStorageAsync(CancellationToken cancellationToken)
+    {
+        var storage = storageOptions.Value;
+
+        try
+        {
+            Directory.CreateDirectory(storage.BatchDirectory);
+            logger.LogDebug("Директория батчей создана: {Path}", storage.BatchDirectory);
+
+            var dbDirectory = Path.GetDirectoryName(storage.DatabasePath);
+            if (!string.IsNullOrEmpty(dbDirectory))
+            {
+                Directory.CreateDirectory(dbDirectory);
+                logger.LogDebug("Директория БД создана: {Path}", dbDirectory);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при создании директорий хранилища");
+            throw;
+        }
+
+        await Task.CompletedTask; // Для консистентности async-методов
+    }
+
+    /// <summary>
+    /// Инициализация базы данных.
+    /// </summary>
+    private async Task InitializeDatabaseAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.EnsureCreatedAsync(cancellationToken);
+            logger.LogDebug("База данных инициализирована");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при инициализации базы данных");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Основной цикл опроса обновлений от Telegram Bot API.
+    /// </summary>
     private async Task PollAsync(CancellationToken ct)
     {
         var offset = 0;
+        const int UpdateLimit = 100;
+        const int TimeoutSeconds = 30;
+
+        logger.LogInformation("Начат опрос обновлений с offset={Offset}", offset);
+
         try
         {
             while (!ct.IsCancellationRequested)
             {
-                var updates = await botClient.GetUpdates(offset, limit: 100, timeout: 30, cancellationToken: ct);
-                foreach (var update in updates)
+                try
                 {
-                    if (update.Message?.Text is null) continue;
+                    var updates = await botClient.GetUpdates(
+                        offset: offset,
+                        limit: UpdateLimit,
+                        timeout: TimeoutSeconds,
+                        cancellationToken: ct);
 
-                    var command = BotCommandParser.Parse(update.Message.Text, update.Message.Chat.Id);
-                    if (command.Type == BotCommandType.Unknown) continue;
+                    foreach (var update in updates)
+                    {
+                        // Всегда обновляем offset, даже если апдейт игнорируется
+                        offset = update.Id + 1;
 
-                    logger.LogInformation("Обработка команды {Text} от {UserId}", update.Message.Text, command.TelegramUserId);
-                    await botService.HandleCommandAsync(command, ct);
-                    offset = update.Id + 1;
+                        // Игнорируем апдейты без текстового сообщения
+                        if (update.Message?.Text is null)
+                        {
+                            logger.LogDebug("Пропущен апдейт {UpdateId} без текстового сообщения", update.Id);
+                            continue;
+                        }
+
+                        // Парсинг и обработка команды
+                        var command = BotCommandParser.Parse(update.Message.Text, update.Message.Chat.Id);
+                        if (command.Type == BotCommandType.Unknown)
+                        {
+                            logger.LogDebug("Неизвестная команда: {Text} от {UserId}", 
+                                update.Message.Text, update.Message.Chat.Id);
+                            continue;
+                        }
+
+                        logger.LogInformation("Обработка команды {Text} от {UserId}", 
+                            update.Message.Text, command.TelegramUserId);
+
+                        try
+                        {
+                            await botService.HandleCommandAsync(command, ct);
+                        }
+                        catch (Exception cmdEx)
+                        {
+                            logger.LogError(cmdEx, "Ошибка при обработке команды {CommandType} от {UserId}", 
+                                command.Type, command.TelegramUserId);
+                            // Продолжаем обработку других апдейтов
+                        }
+                    }
+
+                    // Небольшая задержка между итерациями при отсутствии апдейтов
+                    if (updates.Length == 0)
+                    {
+                        await Task.Delay(100, ct);
+                    }
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    // Graceful shutdown - не логируем как ошибку
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при получении обновлений, повтор через 5 секунд");
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
                 }
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            logger.LogInformation("Поллинг остановлен");
+            logger.LogInformation("Опрос обновлений остановлен (offset={Offset})", offset);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка в цикле поллинга");
+            logger.LogCritical(ex, "Критическая ошибка в цикле опроса");
+            lifetime.StopApplication();
         }
     }
 }

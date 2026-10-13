@@ -23,6 +23,7 @@ public class UserbotClient(ILogger<UserbotClient> logger, IOptions<TelegramOptio
             _ => null!,
         });
         _client.FloodRetryThreshold = 2;
+        _client.MTProxyUrl = _options.MTProxyUrl;
 
         Helpers.Log = (level, message) => logger.Log((LogLevel)Math.Clamp(level, 0, 6), message);
 

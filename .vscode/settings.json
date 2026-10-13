@@ -1,3 +1,59 @@
 {
-    "dotnet.defaultSolution": "NewsDigest.slnx"
+    "dotnet.defaultSolution": "NewsDigest.slnx",
+    
+    // Форматирование и стиль кода
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    
+    // C# специфичные настройки
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp",
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.rulers": [120]
+    },
+    
+    // Omnisharp настройки
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.enableImportCompletion": true,
+    "omnisharp.organizeImportsOnFormat": true,
+    
+    // Файлы для исключения из поиска
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/.vs": true
+    },
+    
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/.vs": true,
+        "**/node_modules": true
+    },
+    
+    // Автосохранение
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    
+    // Подсветка TODO и комментариев
+    "todo-tree.general.tags": [
+        "TODO",
+        "FIXME",
+        "HACK",
+        "NOTE",
+        "BUG"
+    ],
+    
+    // Git
+    "git.enableSmartCommit": true,
+    "git.confirmSync": false,
+    
+    // Отладка
+    "debug.console.fontSize": 14,
+    "debug.console.wordWrap": true,
+    "debug.internalConsoleOptions": "neverOpen"
 }

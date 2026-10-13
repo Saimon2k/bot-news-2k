@@ -364,3 +364,5 @@ FodyWeavers.xsd
 /TelegramConnector/appsettings.Development.json
 /TelegramConnector/appsettings.json
 .secrets.toml
+NewsDigest.App/news-digest.db
+.secrets.json

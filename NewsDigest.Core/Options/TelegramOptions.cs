@@ -9,5 +9,6 @@ namespace NewsDigest.Core.Options
         [Required] public string PhoneNumber { get; set; } = string.Empty;
         [Required] public string SessionPath { get; set; } = string.Empty;
         [Required] public string BotToken { get; set; } = string.Empty;
+        public string MTProxyUrl { get; set; } = string.Empty;
     }
 }
