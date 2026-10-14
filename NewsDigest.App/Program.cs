@@ -2,18 +2,6 @@
 
 internal static class Program
 {
-    private static string GetContentRoot()
-    {
-        var currentDir = Directory.GetCurrentDirectory();
-        // Если уже в папке NewsDigest.App, используем текущую
-        if (currentDir.EndsWith("NewsDigest.App", StringComparison.OrdinalIgnoreCase))
-            return currentDir;
-
-        // Иначе добавляем NewsDigest.App к пути
-        var projectDir = Path.Combine(currentDir, "NewsDigest.App");
-        return Directory.Exists(projectDir) ? projectDir : currentDir;
-    }
-
     public static async Task Main(string[] args)
     {
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
@@ -23,7 +11,7 @@ internal static class Program
         try
         {
             host = Host.CreateDefaultBuilder(args)
-                .UseContentRoot(GetContentRoot())
+                //.UseContentRoot(GetContentRoot())
                 .ConfigureAppConfiguration((context, builder) =>
                     builder.AddUserSecrets(typeof(Program).Assembly, optional: true))
                 .ConfigureServices((context, services) =>
@@ -34,9 +22,9 @@ internal static class Program
                     services.Configure<OllamaOptions>(config.GetSection("Ollama"));
                     services.Configure<StorageOptions>(config.GetSection("Storage"));
 
-                    services.AddOptions<TelegramOptions>().ValidateDataAnnotations();
-                    services.AddOptions<OllamaOptions>().ValidateDataAnnotations();
-                    services.AddOptions<StorageOptions>().ValidateDataAnnotations();
+                    services.AddOptions<TelegramOptions>().ValidateDataAnnotations().ValidateOnStart();
+                    services.AddOptions<OllamaOptions>().ValidateDataAnnotations().ValidateOnStart();
+                    services.AddOptions<StorageOptions>().ValidateDataAnnotations().ValidateOnStart();
 
                     var app = config.GetSection("Storage");
                     var dbPath = string.IsNullOrEmpty(app["DatabasePath"]) ? "news-digest.db" : app["DatabasePath"];

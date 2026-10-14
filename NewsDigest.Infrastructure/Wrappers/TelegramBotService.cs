@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot;
 
@@ -20,7 +21,7 @@ public class TelegramBotService(
                 case BotCommandType.Add: await HandleAddAsync(command, ct); break;
                 case BotCommandType.Remove: await HandleRemoveAsync(command, ct); break;
                 case BotCommandType.List: await HandleListAsync(command.TelegramUserId, ct); break;
-                case BotCommandType.News: await HandleNewsAsync(command.TelegramUserId, ct); break;
+                case BotCommandType.News: await HandleNewsAsync(command, ct); break;
                 case BotCommandType.Next: await HandleNextAsync(command.TelegramUserId, ct); break;
                 case BotCommandType.Status: await HandleStatusAsync(command.TelegramUserId, ct); break;
                 default: await ReplyAsync(command.TelegramUserId, "Неизвестная команда. Доступно: /start /add /remove /list /news /next /status", ct); break;
@@ -40,6 +41,7 @@ public class TelegramBotService(
             /remove @username — удалить канал
             /list — список каналов
             /news — собрать дайджест
+            /news 24 — новости за последние 24 часа
             /next — следующая новость
             /status — статус очереди
             """, ct);
@@ -123,8 +125,21 @@ public class TelegramBotService(
         await ReplyAsync(telegramUserId, $"Ваши каналы:\n{text}", ct);
     }
 
-    private async Task HandleNewsAsync(long telegramUserId, CancellationToken ct)
+    private async Task HandleNewsAsync(BotCommand command, CancellationToken ct)
     {
+        var telegramUserId = command.TelegramUserId;
+        TimeSpan? lookbackPeriod = null;
+        if (!string.IsNullOrWhiteSpace(command.Argument))
+        {
+            if (!int.TryParse(command.Argument, NumberStyles.None, CultureInfo.InvariantCulture, out var hours) || hours is < 1 or > 720)
+            {
+                await ReplyAsync(telegramUserId, "Формат: /news или /news <часы> (от 1 до 720). Например: /news 24.", ct);
+                return;
+            }
+
+            lookbackPeriod = TimeSpan.FromHours(hours);
+        }
+
         await using var scope = scopeFactory.CreateAsyncScope();
         var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         var collector = scope.ServiceProvider.GetRequiredService<INewsCollector>();
@@ -133,11 +148,12 @@ public class TelegramBotService(
         var channelStateRepo = scope.ServiceProvider.GetRequiredService<IChannelStateRepository>();
 
         var user = await userRepo.GetOrCreateAsync(telegramUserId, ct);
-        var result = await collector.CollectNewsAsync(user.Id, ct);
+        var result = await collector.CollectNewsAsync(user.Id, ct, lookbackPeriod);
 
         if (result.Messages.Count == 0)
         {
-            await ReplyAsync(telegramUserId, "Новых новостей нет.", ct);
+            var periodMessage = lookbackPeriod is null ? string.Empty : $" за последние {(int)lookbackPeriod.Value.TotalHours} ч.";
+            await ReplyAsync(telegramUserId, $"Новых новостей{periodMessage} нет.", ct);
             return;
         }
 
@@ -147,8 +163,11 @@ public class TelegramBotService(
         foreach (var item in items) item.DigestQueueId = queue.Id;
         await queueRepo.AddItemsAsync(items, ct);
 
-        foreach (var channelId in result.ProcessedChannelIds)
-            await channelStateRepo.UpdateLastDigestAsync(user.Id, channelId, DateTime.UtcNow, 0, ct);
+        if (lookbackPeriod is null)
+        {
+            foreach (var channelId in result.ProcessedChannelIds)
+                await channelStateRepo.UpdateLastDigestAsync(user.Id, channelId, DateTime.UtcNow, 0, ct);
+        }
 
         var message = items.Count == 0
             ? "Дайджест пуст после обработки LLM."

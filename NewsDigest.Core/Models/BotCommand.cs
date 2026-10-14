@@ -20,7 +20,7 @@ public static class BotCommandParser
             "/add" => new BotCommand(BotCommandType.Add, argument, telegramUserId),
             "/remove" => new BotCommand(BotCommandType.Remove, argument, telegramUserId),
             "/list" => new BotCommand(BotCommandType.List, string.Empty, telegramUserId),
-            "/news" => new BotCommand(BotCommandType.News, string.Empty, telegramUserId),
+            "/news" => new BotCommand(BotCommandType.News, argument, telegramUserId),
             "/next" => new BotCommand(BotCommandType.Next, string.Empty, telegramUserId),
             "/status" => new BotCommand(BotCommandType.Status, string.Empty, telegramUserId),
             _ => new BotCommand(BotCommandType.Unknown, text, telegramUserId),

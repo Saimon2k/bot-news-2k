@@ -71,12 +71,27 @@ public class UserbotClient(ILogger<UserbotClient> logger, IOptions<TelegramOptio
     public async Task<IReadOnlyList<ChannelMessage>> GetHistoryAsync(long channelId, string? channelUsername, DateTime from, DateTime to, CancellationToken ct = default)
     {
         var peer = await ResolvePeerAsync(channelId, channelUsername, ct);
-        var result = await Client.Messages_GetHistory(peer,
-            offset_id: 0, offset_date: to, add_offset: 0, limit: 10, max_id: 0, min_id: 0, hash: 0);
+        const int pageSize = 100;
+        var messages = new List<TL.Message>();
+        var offsetId = 0;
 
-        return result.Messages
-            .OfType<TL.Message>()
-            .Where(m => m.date >= from && m.date <= to)
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            var result = await Client.Messages_GetHistory(peer,
+                offset_id: offsetId, offset_date: offsetId == 0 ? to : default, add_offset: 0, limit: pageSize, max_id: 0, min_id: 0, hash: 0);
+            var page = result.Messages.OfType<TL.Message>().ToList();
+            if (page.Count == 0) break;
+
+            messages.AddRange(page.Where(m => m.date >= from && m.date <= to));
+
+            var oldestMessage = page[^1];
+            if (oldestMessage.date < from || result.Messages.Length < pageSize) break;
+
+            offsetId = oldestMessage.id;
+        }
+
+        return messages
             .Select(m => new ChannelMessage(channelId, channelUsername, m.id, m.date, m.message ?? string.Empty, m.media is not null))
             .ToList();
     }

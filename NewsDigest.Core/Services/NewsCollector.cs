@@ -9,11 +9,12 @@ public class NewsCollector(
     IChannelStateRepository channelStateRepository,
     IOptions<StorageOptions> storageOptions) : INewsCollector
 {
-    public async Task<NewsCollectionResult> CollectNewsAsync(int userId, CancellationToken ct = default)
+    public async Task<NewsCollectionResult> CollectNewsAsync(int userId, CancellationToken ct = default, TimeSpan? lookbackPeriod = null)
     {
         var channels = await userChannelRepository.GetAllForUserAsync(userId, ct);
         if (channels.Count == 0) return new NewsCollectionResult([], string.Empty, []);
 
+        var to = DateTime.UtcNow;
         var collected = new List<CollectedMessage>();
         var processedChannelIds = new List<long>();
 
@@ -25,7 +26,8 @@ public class NewsCollector(
             IReadOnlyList<ChannelMessage> history;
             try
             {
-                history = await userbotClient.GetHistoryAsync(channel.ChannelId, channel.ChannelUsername, state.LastDigestDate, DateTime.UtcNow, ct);
+                var from = lookbackPeriod is null ? state.LastDigestDate : to - lookbackPeriod.Value;
+                history = await userbotClient.GetHistoryAsync(channel.ChannelId, channel.ChannelUsername, from, to, ct);
             }
             catch (Exception ex)
             {
