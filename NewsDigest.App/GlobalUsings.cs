@@ -1,0 +1,15 @@
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
+global using Microsoft.Extensions.Options;
+global using NewsDigest.App.Services;
+global using NewsDigest.Core.Interfaces;
+global using NewsDigest.Core.Models;
+global using NewsDigest.Core.Options;
+global using NewsDigest.Core.Services;
+global using NewsDigest.Infrastructure.Data;
+global using NewsDigest.Infrastructure.Repositories;
+global using NewsDigest.Infrastructure.Wrappers;
+global using Telegram.Bot;
