@@ -1,7 +1,4 @@
 using FluentAssertions;
-using NewsDigest.Core.Models;
-using NewsDigest.Infrastructure.Data;
-using NewsDigest.Infrastructure.Repositories;
 
 namespace NewsDigest.Tests;
 

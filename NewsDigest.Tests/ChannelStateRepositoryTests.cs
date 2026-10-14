@@ -1,6 +1,4 @@
 using FluentAssertions;
-using NewsDigest.Infrastructure.Data;
-using NewsDigest.Infrastructure.Repositories;
 
 namespace NewsDigest.Tests;
 

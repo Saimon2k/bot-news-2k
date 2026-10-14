@@ -1,6 +1,4 @@
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using NewsDigest.Infrastructure.Data;
 
 namespace NewsDigest.Tests;
 

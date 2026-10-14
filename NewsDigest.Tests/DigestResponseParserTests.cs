@@ -1,5 +1,4 @@
 using FluentAssertions;
-using NewsDigest.Core.Services;
 
 namespace NewsDigest.Tests;
 
