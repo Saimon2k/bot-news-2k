@@ -24,4 +24,22 @@ public class BotCommandParserTests
         command.Type.Should().Be(BotCommandType.News);
         command.Argument.Should().Be(expectedHours);
     }
+
+    [Theory]
+    [InlineData("/start@NewsDigestBot", BotCommandType.Start)]
+    [InlineData("/news@NewsDigestBot 24", BotCommandType.News)]
+    public void Parse_accepts_commands_addressed_to_bot(string text, BotCommandType expectedType)
+    {
+        var command = BotCommandParser.Parse(text, 123, "NewsDigestBot");
+
+        command.Type.Should().Be(expectedType);
+    }
+
+    [Fact]
+    public void Parse_ignores_commands_addressed_to_another_bot()
+    {
+        var command = BotCommandParser.Parse("/start@OtherBot", 123, "NewsDigestBot");
+
+        command.Type.Should().Be(BotCommandType.Unknown);
+    }
 }

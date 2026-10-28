@@ -6,12 +6,17 @@ public sealed record BotCommand(BotCommandType Type, string Argument, long Teleg
 
 public static class BotCommandParser
 {
-    public static BotCommand Parse(string? text, long telegramUserId)
+    public static BotCommand Parse(string? text, long telegramUserId, string? botUsername = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return new BotCommand(BotCommandType.Unknown, string.Empty, telegramUserId);
 
         var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        var command = parts[0].ToLowerInvariant();
+        var commandParts = parts[0].Split('@', 2);
+        if (commandParts.Length > 1 && botUsername is not null &&
+            !commandParts[1].Equals(botUsername, StringComparison.OrdinalIgnoreCase))
+            return new BotCommand(BotCommandType.Unknown, text, telegramUserId);
+
+        var command = commandParts[0].ToLowerInvariant();
         var argument = parts.Length > 1 ? parts[1].Trim() : string.Empty;
 
         return command switch
