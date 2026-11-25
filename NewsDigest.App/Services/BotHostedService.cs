@@ -26,6 +26,7 @@ public class BotHostedService(
 {
     private CancellationTokenSource? _cts;
     private Task? _pollingTask;
+    private Task? _authTask;
 
     /// <summary>
     /// Запуск сервиса: инициализация хранилища, БД, авторизация и начало опроса обновлений.
@@ -42,20 +43,23 @@ public class BotHostedService(
             // Инициализация базы данных
             await InitializeDatabaseAsync(cancellationToken);
 
-            // Авторизация юзербота
-            var authorized = await authService.LoginAsync(cancellationToken);
-            if (!authorized)
+            // Проверяем Bot API и снимаем webhook: одновременно использовать webhook и polling нельзя.
+            var bot = await botClient.GetMe(cancellationToken);
+            logger.LogInformation("Подключен Telegram-бот @{Username}", bot.Username);
+
+            var webhookInfo = await botClient.GetWebhookInfo(cancellationToken);
+            if (!string.IsNullOrEmpty(webhookInfo.Url))
             {
-                logger.LogError("Не удалось авторизовать юзербота, остановка хоста");
-                lifetime.StopApplication();
-                return;
+                logger.LogWarning("Удаляю webhook {WebhookUrl}: приложение использует long polling", webhookInfo.Url);
+                await botClient.DeleteWebhook(cancellationToken: cancellationToken);
             }
 
-            // Запуск опроса обновлений
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _pollingTask = Task.Run(() => PollAsync(_cts.Token), _cts.Token);
+            // Приём сообщений не должен ждать интерактивной авторизации юзербота.
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(lifetime.ApplicationStopping);
+            _pollingTask = PollAsync(_cts.Token, bot.Username);
+            _authTask = AuthenticateUserbotAsync(_cts.Token);
 
-            logger.LogInformation("NewsDigest успешно запущен");
+            logger.LogInformation("Опрос сообщений запущен; авторизация юзербота выполняется отдельно");
         }
         catch (Exception ex)
         {
@@ -77,13 +81,15 @@ public class BotHostedService(
             // Отмена токена для завершения опроса
             _cts?.Cancel();
 
-            // Ожидание завершения задачи опроса с таймаутом
-            if (_pollingTask != null)
+            // Ожидание фоновых задач с таймаутом.
+            var tasks = new[] { _pollingTask, _authTask }.OfType<Task>().ToArray();
+            if (tasks.Length > 0)
             {
-                var completedTask = await Task.WhenAny(_pollingTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
-                if (completedTask != _pollingTask)
+                var allTasks = Task.WhenAll(tasks);
+                var completedTask = await Task.WhenAny(allTasks, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+                if (completedTask != allTasks)
                 {
-                    logger.LogWarning("Задача опроса не завершилась в течение таймаута");
+                    logger.LogWarning("Фоновые задачи не завершились в течение таймаута");
                 }
             }
         }
@@ -95,6 +101,23 @@ public class BotHostedService(
         {
             _cts?.Dispose();
             logger.LogInformation("NewsDigest остановлен");
+        }
+    }
+
+    private async Task AuthenticateUserbotAsync(CancellationToken ct)
+    {
+        try
+        {
+            if (!await authService.LoginAsync(ct))
+                logger.LogError("Не удалось авторизовать юзербота. Получение сообщений ботом продолжится, но функции чтения каналов будут недоступны");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Graceful shutdown.
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка авторизации юзербота; получение сообщений ботом продолжится");
         }
     }
 
@@ -148,7 +171,7 @@ public class BotHostedService(
     /// <summary>
     /// Основной цикл опроса обновлений от Telegram Bot API.
     /// </summary>
-    private async Task PollAsync(CancellationToken ct)
+    private async Task PollAsync(CancellationToken ct, string? botUsername)
     {
         var offset = 0;
         const int UpdateLimit = 100;
@@ -181,7 +204,7 @@ public class BotHostedService(
                         }
 
                         // Парсинг и обработка команды
-                        var command = BotCommandParser.Parse(update.Message.Text, update.Message.Chat.Id);
+                        var command = BotCommandParser.Parse(update.Message.Text, update.Message.Chat.Id, botUsername);
                         if (command.Type == BotCommandType.Unknown)
                         {
                             logger.LogDebug("Неизвестная команда: {Text} от {UserId}", 
